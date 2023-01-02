@@ -5,7 +5,6 @@
 #include "SORT.h"
 
 namespace SORT {
-    SORT::SORT() = default;
 
     void SORT::handle(vector<TrackingBox> tbs
 #if SORT_TRACKER_DEBUG

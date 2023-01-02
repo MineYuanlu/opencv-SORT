@@ -29,9 +29,9 @@ namespace SORT {
     class SORT {
     public:
 
-        static const constexpr int min_hits = 3;
-        static const constexpr int max_age = 1;
-        static const constexpr double iouThreshold = 0.3;
+        const int min_hits;
+        const int max_age;
+        const double iouThreshold;
 
         int frame_count = 0;
         vector<KalmanTracker> trackers;
@@ -51,7 +51,14 @@ namespace SORT {
 
         int kf_count = 0;
 
-        SORT();
+        /**
+         *
+         * @param min_hits 最少命中次数, 大于此数量的才会被追踪
+         * @param max_age 最大消失次数, 大于此值不出现的会被移除
+         * @param iouThreshold iou阈值
+         */
+        explicit SORT(int min_hits = 3, int max_age = 1, double iouThreshold = 0.3)
+                : min_hits(min_hits), max_age(max_age), iouThreshold(iouThreshold) {}
 
         void handle(vector<TrackingBox> tbs
 #if SORT_TRACKER_DEBUG
