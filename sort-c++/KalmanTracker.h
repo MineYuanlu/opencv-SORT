@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 // KalmanTracker.h: KalmanTracker Class Declaration
 
-#ifndef KALMAN_H
-#define KALMAN_H 2
+#ifndef OPENCV_SORT_KALMAN_H
+#define OPENCV_SORT_KALMAN_H 2
 
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -10,63 +10,51 @@
 using namespace std;
 using namespace cv;
 
-#define StateType Rect_<float>
 
-
+namespace SORT {
 // This class represents the internel state of individual tracked objects observed as bounding box.
-class KalmanTracker
-{
-public:
-	KalmanTracker()
-	{
-		init_kf(StateType());
-		m_time_since_update = 0;
-		m_hits = 0;
-		m_hit_streak = 0;
-		m_age = 0;
-		m_id = kf_count;
-		//kf_count++;
-	}
-	KalmanTracker(StateType initRect)
-	{
-		init_kf(initRect);
-		m_time_since_update = 0;
-		m_hits = 0;
-		m_hit_streak = 0;
-		m_age = 0;
-		m_id = kf_count;
-		kf_count++;
-	}
+//此类表示作为边界框观察到的单个跟踪对象的内部状态。
+    class KalmanTracker {
+    public:
+        using StateType = Rect_<float>;
 
-	~KalmanTracker()
-	{
-		m_history.clear();
-	}
+        explicit KalmanTracker(int &kf_count) {
+            init_kf(StateType());
+            m_id = kf_count;
+            //kf_count++;
+        }
 
-	StateType predict();
-	void update(StateType stateMat);
-	
-	StateType get_state();
-	StateType get_rect_xysr(float cx, float cy, float s, float r);
+        KalmanTracker(StateType initRect, int &kf_count) {
+            init_kf(initRect);
+            m_id = kf_count;
+            kf_count++;
+        }
 
-	static int kf_count;
+        ~KalmanTracker() { m_history.clear(); }
 
-	int m_time_since_update;
-	int m_hits;
-	int m_hit_streak;
-	int m_age;
-	int m_id;
+        StateType predict();
 
-private:
-	void init_kf(StateType stateMat);
+        void update(StateType stateMat);
 
-	cv::KalmanFilter kf;
-	cv::Mat measurement;
-
-	std::vector<StateType> m_history;
-};
+        StateType get_state() const;
 
 
+        int m_time_since_update = 0;
+        int m_hits = 0;
+        int m_hit_streak = 0;
+        int m_age = 0;
+        int m_id;
 
+    private:
+        void init_kf(const StateType &stateMat);
 
-#endif
+        static StateType get_rect_xysr(float cx, float cy, float s, float r);
+
+        cv::KalmanFilter kf;
+        cv::Mat measurement;
+
+        std::vector<StateType> m_history;
+    };
+}
+
+#endif //OPENCV_SORT_KALMAN_H

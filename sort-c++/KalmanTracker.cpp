@@ -4,102 +4,95 @@
 #include "KalmanTracker.h"
 
 
-int KalmanTracker::kf_count = 0;
+namespace SORT {
+
+    // 初始化卡尔曼滤波器
+    void KalmanTracker::init_kf(const StateType &stateMat) {
+        int stateNum = 7;
+        int measureNum = 4;
+        kf = KalmanFilter(stateNum, measureNum, 0);
+
+        measurement = Mat::zeros(measureNum, 1, CV_32F);
+
+        kf.transitionMatrix = (Mat_<float>(stateNum, stateNum) <<
+                                                               1, 0, 0, 0, 1, 0, 0,
+                0, 1, 0, 0, 0, 1, 0,
+                0, 0, 1, 0, 0, 0, 1,
+                0, 0, 0, 1, 0, 0, 0,
+                0, 0, 0, 0, 1, 0, 0,
+                0, 0, 0, 0, 0, 1, 0,
+                0, 0, 0, 0, 0, 0, 1);
+
+        setIdentity(kf.measurementMatrix);
+        setIdentity(kf.processNoiseCov, Scalar::all(1e-2));
+        setIdentity(kf.measurementNoiseCov, Scalar::all(1e-1));
+        setIdentity(kf.errorCovPost, Scalar::all(1));
+
+        // initialize state vector with bounding box in [cx,cy,s,r] style
+        kf.statePost.at<float>(0, 0) = stateMat.x + stateMat.width / 2;
+        kf.statePost.at<float>(1, 0) = stateMat.y + stateMat.height / 2;
+        kf.statePost.at<float>(2, 0) = stateMat.area();
+        kf.statePost.at<float>(3, 0) = stateMat.width / stateMat.height;
+    }
 
 
-// initialize Kalman filter
-void KalmanTracker::init_kf(StateType stateMat)
-{
-	int stateNum = 7;
-	int measureNum = 4;
-	kf = KalmanFilter(stateNum, measureNum, 0);
+    // 预测估计的边界框
+    KalmanTracker::StateType KalmanTracker::predict() {
+        // predict
+        Mat p = kf.predict();
+        m_age += 1;
 
-	measurement = Mat::zeros(measureNum, 1, CV_32F);
+        if (m_time_since_update > 0)
+            m_hit_streak = 0;
+        m_time_since_update += 1;
 
-	kf.transitionMatrix = *(Mat_<float>(stateNum, stateNum) <<
-		1, 0, 0, 0, 1, 0, 0,
-		0, 1, 0, 0, 0, 1, 0,
-		0, 0, 1, 0, 0, 0, 1,
-		0, 0, 0, 1, 0, 0, 0,
-		0, 0, 0, 0, 1, 0, 0,
-		0, 0, 0, 0, 0, 1, 0,
-		0, 0, 0, 0, 0, 0, 1);
+        StateType predictBox = get_rect_xysr(p.at<float>(0, 0), p.at<float>(1, 0), p.at<float>(2, 0),
+                                             p.at<float>(3, 0));
 
-	setIdentity(kf.measurementMatrix);
-	setIdentity(kf.processNoiseCov, Scalar::all(1e-2));
-	setIdentity(kf.measurementNoiseCov, Scalar::all(1e-1));
-	setIdentity(kf.errorCovPost, Scalar::all(1));
-	
-	// initialize state vector with bounding box in [cx,cy,s,r] style
-	kf.statePost.at<float>(0, 0) = stateMat.x + stateMat.width / 2;
-	kf.statePost.at<float>(1, 0) = stateMat.y + stateMat.height / 2;
-	kf.statePost.at<float>(2, 0) = stateMat.area();
-	kf.statePost.at<float>(3, 0) = stateMat.width / stateMat.height;
+        m_history.push_back(predictBox);
+        return m_history.back();
+    }
+
+
+    // 用观察到的边界框更新状态向量
+    void KalmanTracker::update(StateType stateMat) {
+        m_time_since_update = 0;
+        m_history.clear();
+        m_hits += 1;
+        m_hit_streak += 1;
+
+        // measurement
+        measurement.at<float>(0, 0) = stateMat.x + stateMat.width / 2;
+        measurement.at<float>(1, 0) = stateMat.y + stateMat.height / 2;
+        measurement.at<float>(2, 0) = stateMat.area();
+        measurement.at<float>(3, 0) = stateMat.width / stateMat.height;
+
+        // update
+        kf.correct(measurement);
+    }
+
+
+    // 返回当前状态向量
+    KalmanTracker::StateType KalmanTracker::get_state() const {
+        Mat s = kf.statePost;
+        return get_rect_xysr(s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0));
+    }
+
+
+    // 将边界框从 [cx,cy,s,r] 转换为 [x,y,w,h] 样式。
+    KalmanTracker::StateType KalmanTracker::get_rect_xysr(float cx, float cy, float s, float r) {
+        float w = sqrt(s * r);
+        float h = s / w;
+        float x = (cx - w / 2);
+        float y = (cy - h / 2);
+
+        if (x < 0 && cx > 0) x = 0;
+        if (y < 0 && cy > 0) y = 0;
+
+        return {x, y, w, h};
+    }
+
 }
-
-
-// Predict the estimated bounding box.
-StateType KalmanTracker::predict()
-{
-	// predict
-	Mat p = kf.predict();
-	m_age += 1;
-
-	if (m_time_since_update > 0)
-		m_hit_streak = 0;
-	m_time_since_update += 1;
-
-	StateType predictBox = get_rect_xysr(p.at<float>(0, 0), p.at<float>(1, 0), p.at<float>(2, 0), p.at<float>(3, 0));
-
-	m_history.push_back(predictBox);
-	return m_history.back();
-}
-
-
-// Update the state vector with observed bounding box.
-void KalmanTracker::update(StateType stateMat)
-{
-	m_time_since_update = 0;
-	m_history.clear();
-	m_hits += 1;
-	m_hit_streak += 1;
-
-	// measurement
-	measurement.at<float>(0, 0) = stateMat.x + stateMat.width / 2;
-	measurement.at<float>(1, 0) = stateMat.y + stateMat.height / 2;
-	measurement.at<float>(2, 0) = stateMat.area();
-	measurement.at<float>(3, 0) = stateMat.width / stateMat.height;
-
-	// update
-	kf.correct(measurement);
-}
-
-
-// Return the current state vector
-StateType KalmanTracker::get_state()
-{
-	Mat s = kf.statePost;
-	return get_rect_xysr(s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0));
-}
-
-
-// Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style.
-StateType KalmanTracker::get_rect_xysr(float cx, float cy, float s, float r)
-{
-	float w = sqrt(s * r);
-	float h = s / w;
-	float x = (cx - w / 2);
-	float y = (cy - h / 2);
-
-	if (x < 0 && cx > 0)
-		x = 0;
-	if (y < 0 && cy > 0)
-		y = 0;
-
-	return StateType(x, y, w, h);
-}
-
-
 
 /*
 // --------------------------------------------------------------------

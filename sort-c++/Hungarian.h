@@ -9,26 +9,49 @@
 // by Cong Ma, 2016
 // 
 
+#ifndef OPENCV_SORT_HUNGARIAN_ALGORITHM_H
+#define OPENCV_SORT_HUNGARIAN_ALGORITHM_H 2
+
 #include <iostream>
 #include <vector>
 
 using namespace std;
 
+namespace SORT {
+    class HungarianAlgorithm {
+    public:
+        HungarianAlgorithm() = delete;
 
-class HungarianAlgorithm
-{
-public:
-	HungarianAlgorithm();
-	~HungarianAlgorithm();
-	double Solve(vector<vector<double>>& DistMatrix, vector<int>& Assignment);
+        static double Solve(const vector<double> &DistMatrix, const size_t &nRows, const size_t &nCols,
+                            vector<int> &Assignment);
 
-private:
-	void assignmentoptimal(int *assignment, double *cost, double *distMatrix, int nOfRows, int nOfColumns);
-	void buildassignmentvector(int *assignment, bool *starMatrix, int nOfRows, int nOfColumns);
-	void computeassignmentcost(int *assignment, double *cost, double *distMatrix, int nOfRows);
-	void step2a(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim);
-	void step2b(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim);
-	void step3(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim);
-	void step4(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim, int row, int col);
-	void step5(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim);
-};
+    private:
+        static void
+        assignmentoptimal(int *assignment, double *cost, double *distMatrix, size_t nOfRows, size_t nOfColumns);
+
+        static void buildassignmentvector(int *assignment, const bool *starMatrix, size_t nOfRows, size_t nOfColumns);
+
+        static void
+        computeassignmentcost(const int *assignment, double *cost, const double *distMatrix, size_t nOfRows);
+
+        static void
+        step2a(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix,
+               bool *coveredColumns, bool *coveredRows, size_t nOfRows, size_t nOfColumns, size_t minDim);
+
+        static void
+        step2b(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix,
+               bool *coveredColumns, bool *coveredRows, size_t nOfRows, size_t nOfColumns, size_t minDim);
+
+        static void step3(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix,
+                          bool *coveredColumns, bool *coveredRows, size_t nOfRows, size_t nOfColumns, size_t minDim);
+
+        static void step4(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix,
+                          bool *coveredColumns, bool *coveredRows, size_t nOfRows, size_t nOfColumns, size_t minDim,
+                          size_t row, size_t col);
+
+        static void step5(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix,
+                          bool *coveredColumns, bool *coveredRows, size_t nOfRows, size_t nOfColumns, size_t minDim);
+    };
+}
+
+#endif//OPENCV_SORT_HUNGARIAN_ALGORITHM_H
