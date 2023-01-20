@@ -11,7 +11,7 @@
 
 #ifndef SORT_TRACKER_DEBUG
 #ifdef DEBUG
-#define SORT_TRACKER_DEBUG (DEBUG && 1)
+#define SORT_TRACKER_DEBUG (DEBUG && 0)
 #else
 #define SORT_TRACKER_DEBUG 1
 #endif
