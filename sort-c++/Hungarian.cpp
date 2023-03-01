@@ -9,6 +9,9 @@
 // by Cong Ma, 2016
 // 
 
+#include <cstring>
+#include <cmath>
+#include <cfloat>
 #include "Hungarian.h"
 
 
